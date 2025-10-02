@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import Markdown from "react-markdown";
 import { SettingsDialog } from "@/components/settings-dialog";
+import { LoadingConsole } from "@/components/loading-console";
 import { WebSocketManager } from "@/lib/websocket";
 import { research } from "@/lib/api";
 import {
@@ -21,6 +22,12 @@ interface Message {
   timestamp: Date;
 }
 
+interface StateSection {
+  state: string;
+  logs: FormattedLog[];
+  isActive: boolean;
+}
+
 const LOCAL_STORAGE_KEY = "data-gov-server-url";
 
 export default function Home() {
@@ -29,11 +36,24 @@ export default function Home() {
   const [isQuerying, setIsQuerying] = useState(false);
   const [serverUrl, setServerUrl] = useState("");
   const [connectionId, setConnectionId] = useState<string | null>(null);
-  const [logs, setLogs] = useState<FormattedLog[]>([]);
-  const [currentState, setCurrentState] = useState<string | null>(null);
+  const [stateSections, setStateSections] = useState<StateSection[]>([]);
   const [resultContent, setResultContent] = useState<string>("");
   const wsManagerRef = useRef<WebSocketManager | null>(null);
-  const logsEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Derive current state and logs from stateSections
+  const currentState = useMemo(() => {
+    const activeSection = stateSections.find((s) => s.isActive);
+    return activeSection?.state || null;
+  }, [stateSections]);
+
+  const currentLogs = useMemo(() => {
+    const activeSection = stateSections.find((s) => s.isActive);
+    return activeSection?.logs || [];
+  }, [stateSections]);
+
+  const completedStateSections = useMemo(() => {
+    return stateSections.filter((s) => !s.isActive);
+  }, [stateSections]);
 
   // Initialize WebSocket manager
   useEffect(() => {
@@ -51,11 +71,6 @@ export default function Home() {
       setServerUrl(savedUrl);
     }
   }, []);
-
-  // Auto-scroll logs to bottom
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
 
   // WebSocket connection management
   useEffect(() => {
@@ -81,15 +96,35 @@ export default function Home() {
       // Handle state transitions
       if (message.type === WSMessageType.STATE_TRANSITION) {
         const toState = message.data.to;
-        setCurrentState(toState);
-        // Clear logs on state transition
-        setLogs([]);
+
+        setStateSections((prev) => {
+          // Mark the current active section as inactive
+          const updated = prev.map((section) =>
+            section.isActive ? { ...section, isActive: false } : section
+          );
+
+          // Add the new state as active
+          return [
+            ...updated,
+            {
+              state: toState,
+              logs: [],
+              isActive: true,
+            },
+          ];
+        });
         return;
       }
 
-      // Add formatted log for non-state-transition messages
+      // Add formatted log to the active state section
       const formattedLog = formatWSMessage(message);
-      setLogs((prev) => [...prev, formattedLog]);
+      setStateSections((prev) =>
+        prev.map((section) =>
+          section.isActive
+            ? { ...section, logs: [...section.logs, formattedLog] }
+            : section
+        )
+      );
     });
 
     return () => {
@@ -117,10 +152,9 @@ export default function Home() {
       return;
     }
 
-    // Clear previous logs, result, and state
-    setLogs([]);
+    // Clear previous result and state sections
     setResultContent("");
-    setCurrentState(null);
+    setStateSections([]);
     setIsQuerying(true);
 
     try {
@@ -207,46 +241,7 @@ export default function Home() {
 
       {/* Messages Container */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {isQuerying ? (
-          /* Console-style logs during loading */
-          <div className="border border-border rounded-lg bg-muted/30 p-4 font-mono text-sm max-h-[70vh] overflow-y-auto">
-            {/* State header */}
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              {currentState ? (
-                <span className="text-foreground font-semibold">
-                  Current Step: {currentState}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">
-                  Processing query...
-                </span>
-              )}
-            </div>
-
-            {/* Logs area */}
-            {logs.length === 0 ? (
-              <div className="text-muted-foreground italic text-xs">
-                Waiting for logs...
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {logs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="text-xs text-foreground/80 whitespace-pre-wrap break-words animate-in fade-in slide-in-from-bottom-2 duration-200"
-                  >
-                    <span className="text-muted-foreground">
-                      [{log.timestamp.toLocaleTimeString()}]
-                    </span>{" "}
-                    {log.content}
-                  </div>
-                ))}
-                <div ref={logsEndRef} />
-              </div>
-            )}
-          </div>
-        ) : messages.length === 0 ? (
+        {messages.length === 0 && !isQuerying ? (
           /* Empty state */
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
             <div className="p-4 rounded-full bg-muted/50 mb-6">
@@ -260,8 +255,17 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          /* Results display */
           <div className="space-y-8">
+            {/* Loading Console - shows during querying */}
+            {isQuerying && (
+              <LoadingConsole
+                currentState={currentState}
+                logs={currentLogs}
+                stateSections={completedStateSections}
+              />
+            )}
+
+            {/* Results display - appears below loading console */}
             {messages.map((message) => (
               <div
                 key={message.id}
