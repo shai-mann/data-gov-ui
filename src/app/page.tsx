@@ -38,8 +38,6 @@ export default function Home() {
   const [serverUrl, setServerUrl] = useState("");
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [stateSections, setStateSections] = useState<StateSection[]>([]);
-  const [resultContent, setResultContent] = useState<string>("");
-  const [hasError, setHasError] = useState(false);
   const wsManagerRef = useRef<WebSocketManager | null>(null);
 
   // Derive current state and logs from stateSections
@@ -154,10 +152,9 @@ export default function Home() {
       return;
     }
 
-    // Clear previous result, state sections, and error state
-    setResultContent("");
+    // Clear previous state sections and error state
     setStateSections([]);
-    setHasError(false);
+    setMessages([]);
     setIsQuerying(true);
 
     try {
@@ -168,12 +165,12 @@ export default function Home() {
 
       console.log("Research request successful", result);
 
-      // Set the result content for markdown display
-      if (result.result) {
-        setResultContent(result.result);
-      } else {
-        setResultContent(JSON.stringify(result, null, 2));
-      }
+      // Mark the final active state as inactive (close accordion)
+      setStateSections((prev) =>
+        prev.map((section) =>
+          section.isActive ? { ...section, isActive: false } : section
+        )
+      );
 
       // Add result to messages
       setMessages((prev) => [
@@ -190,7 +187,6 @@ export default function Home() {
       ]);
     } catch (error) {
       console.error("Error calling /research endpoint:", error);
-      setHasError(true);
 
       // Add error message to messages
       setMessages((prev) => [
@@ -272,8 +268,8 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Loading Console - shows during querying or after error */}
-            {(isQuerying || (hasError && stateSections.length > 0)) && (
+            {/* Loading Console - shows during querying, after completion, or after error */}
+            {(isQuerying || stateSections.length > 0) && (
               <LoadingConsole
                 currentState={currentState}
                 logs={currentLogs}
