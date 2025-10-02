@@ -280,7 +280,7 @@ export default function Home() {
               What can I help you find?
             </h1>
             <p className="text-muted-foreground text-lg">
-              Ask a question about government data
+              Ask a question about federal, state, or local government data
             </p>
           </div>
         ) : (
