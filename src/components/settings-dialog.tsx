@@ -1,6 +1,11 @@
 "use client";
 
-import { useLayoutEffect, useState, useImperativeHandle, forwardRef } from "react";
+import {
+  useLayoutEffect,
+  useState,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,10 +27,10 @@ export interface SettingsDialogRef {
   open: () => void;
 }
 
-export const SettingsDialog = forwardRef<SettingsDialogRef, SettingsDialogProps>(({
-  serverUrl,
-  onServerUrlChange,
-}, ref) => {
+export const SettingsDialog = forwardRef<
+  SettingsDialogRef,
+  SettingsDialogProps
+>(({ serverUrl, onServerUrlChange }, ref) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempServerUrl, setTempServerUrl] = useState(serverUrl);
 
@@ -75,7 +80,7 @@ export const SettingsDialog = forwardRef<SettingsDialogRef, SettingsDialogProps>
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              ⚠️ <span className="italic">Temporary:</span> This is a temporary
+              <span className="font-bold">Temporary:</span> This is a temporary
               solution to let me self-host with ngrok. Either clone the agent
               repo and run it locally, or ask me to spin up my version and send
               it to you.
