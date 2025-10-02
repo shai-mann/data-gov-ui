@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Search, Loader2 } from 'lucide-react';
-import Markdown from 'react-markdown';
+import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, Loader2 } from "lucide-react";
+import Markdown from "react-markdown";
+import { SettingsDialog } from "@/components/settings-dialog";
 
 interface Message {
   id: string;
@@ -12,10 +13,27 @@ interface Message {
   timestamp: Date;
 }
 
+const LOCAL_STORAGE_KEY = "data-gov-server-url";
+
 export default function Home() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isQuerying, setIsQuerying] = useState(false);
+  const [serverUrl, setServerUrl] = useState("");
+
+  // Load server URL from local storage on mount
+  useEffect(() => {
+    const savedUrl = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedUrl) {
+      setServerUrl(savedUrl);
+    }
+  }, []);
+
+  // Save server URL to local storage and update state
+  const handleServerUrlChange = (url: string) => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, url);
+    setServerUrl(url);
+  };
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -24,19 +42,26 @@ export default function Home() {
 
     // Mock: simulate adding messages over time
     setTimeout(() => {
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        content: `# Search Results for: "${query}"\n\nThis is a **mock response** with some markdown content:\n\n- First result item\n- Second result item\n- Third result item\n\n\`\`\`javascript\nconst example = "code block";\nconsole.log(example);\n\`\`\`\n\n> This is a blockquote example\n\nMore content will appear here when connected to a websocket.`,
-        timestamp: new Date()
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          content: `# Search Results for: "${query}"\n\nThis is a **mock response** with some markdown content:\n\n- First result item\n- Second result item\n- Third result item\n\n\`\`\`javascript\nconst example = "code block";\nconsole.log(example);\n\`\`\`\n\n> This is a blockquote example\n\nMore content will appear here when connected to a websocket.`,
+          timestamp: new Date(),
+        },
+      ]);
       setIsQuerying(false);
     }, 1000);
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen bg-background">
       {/* Sticky Search Bar */}
-      <div className={`sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b transition-all duration-200 ${isQuerying ? 'pointer-events-none opacity-60' : ''}`}>
+      <div
+        className={`sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b transition-all duration-200 ${
+          isQuerying ? "pointer-events-none opacity-60" : ""
+        }`}
+      >
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex gap-3 items-center">
             <div className="relative flex-1">
@@ -46,16 +71,16 @@ export default function Home() {
                 placeholder="Ask anything..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 disabled={isQuerying}
-                className="pl-10 h-12 text-base shadow-sm"
+                className="pl-10 h-9 text-base shadow-sm"
               />
             </div>
             <Button
               onClick={handleSearch}
               disabled={isQuerying || !query.trim()}
-              size="lg"
-              className="h-12 px-6"
+              size="icon"
+              className="h-9 w-auto px-6"
             >
               {isQuerying ? (
                 <>
@@ -63,9 +88,15 @@ export default function Home() {
                   Searching
                 </>
               ) : (
-                'Search'
+                "Search"
               )}
             </Button>
+            <div className="absolute right-4">
+              <SettingsDialog
+                serverUrl={serverUrl}
+                onServerUrlChange={handleServerUrlChange}
+              />
+            </div>
           </div>
         </div>
       </div>
