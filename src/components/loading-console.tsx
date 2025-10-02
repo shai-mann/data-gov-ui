@@ -96,14 +96,14 @@ export function LoadingConsole({
             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
               <span className="text-foreground font-semibold">
-                Current Step: {currentState}
+                {currentState.replace(/([a-z])([A-Z])/g, "$1 $2")}
               </span>
             </div>
 
             {/* Current active state logs */}
             {logs.length === 0 ? (
               <div className="text-muted-foreground italic text-xs">
-                Waiting for logs...
+                Thinking...
               </div>
             ) : (
               <div className="space-y-1">
