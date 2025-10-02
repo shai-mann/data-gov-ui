@@ -1,12 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export enum WSMessageType {
-  STATE_TRANSITION = 'state_transition',
-  SUB_STATE_LOG = 'sub_state_log',
-  CHAIN_START = 'chain_start',
-  CHAIN_END = 'chain_end',
-  TOOL_START = 'tool_start',
-  TOOL_END = 'tool_end',
-  ERROR = 'error',
-  INFO = 'info',
+  STATE_TRANSITION = "state_transition",
+  SUB_STATE_LOG = "sub_state_log",
+  CHAIN_START = "chain_start",
+  CHAIN_END = "chain_end",
+  TOOL_START = "tool_start",
+  TOOL_END = "tool_end",
+  ERROR = "error",
+  INFO = "info",
 }
 
 export interface WSMessage {
@@ -52,7 +53,7 @@ export interface FormattedLog {
 export function parseWSMessage(data: any): WSMessage | null {
   try {
     // Handle connection messages
-    if (data.type === 'connection') {
+    if (data.type === "connection") {
       return null; // Skip connection messages
     }
 
@@ -63,7 +64,7 @@ export function parseWSMessage(data: any): WSMessage | null {
 
     return data as WSMessage;
   } catch (error) {
-    console.error('Failed to parse WebSocket message:', error);
+    console.error("Failed to parse WebSocket message:", error);
     return null;
   }
 }
@@ -120,7 +121,7 @@ export function formatWSMessage(message: WSMessage): FormattedLog {
       return {
         id,
         timestamp,
-        content: `Chain started: ${message.data.name || 'unnamed'}`,
+        content: `Chain started: ${message.data.name || "unnamed"}`,
         type: message.type,
         raw: message.data,
       };
@@ -129,7 +130,7 @@ export function formatWSMessage(message: WSMessage): FormattedLog {
       return {
         id,
         timestamp,
-        content: `Chain completed: ${message.data.name || 'unnamed'}`,
+        content: `Chain completed: ${message.data.name || "unnamed"}`,
         type: message.type,
         raw: message.data,
       };
@@ -138,7 +139,7 @@ export function formatWSMessage(message: WSMessage): FormattedLog {
       return {
         id,
         timestamp,
-        content: `Tool started: ${message.data.tool || 'unknown'}`,
+        content: `Tool started: ${message.data.tool || "unknown"}`,
         type: message.type,
         raw: message.data,
       };
@@ -147,7 +148,7 @@ export function formatWSMessage(message: WSMessage): FormattedLog {
       return {
         id,
         timestamp,
-        content: `Tool completed: ${message.data.tool || 'unknown'}`,
+        content: `Tool completed: ${message.data.tool || "unknown"}`,
         type: message.type,
         raw: message.data,
       };

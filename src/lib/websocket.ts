@@ -89,7 +89,7 @@ export class WebSocketManager {
         if (process.env.NODE_ENV === "development") {
           console.log("Message data:", data);
         }
-      } catch (error) {
+      } catch {
         console.log("Non-JSON message:", event.data);
       }
     });
