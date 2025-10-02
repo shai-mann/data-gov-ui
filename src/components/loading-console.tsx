@@ -54,7 +54,8 @@ export function LoadingConsole({
             >
               <AccordionItem value={`state-${index}`} className="border-none">
                 <AccordionTrigger className="px-4 py-3 text-sm font-semibold text-foreground hover:no-underline">
-                  {section.state}
+                  {/* Splits camel case into spaces */}
+                  {section.state.replace(/([a-z])([A-Z])/g, "$1 $2")}
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4">
                   <div className="space-y-1">
