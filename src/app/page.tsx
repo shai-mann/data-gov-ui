@@ -8,14 +8,14 @@ import Markdown from "react-markdown";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { WebSocketManager } from "@/lib/websocket";
 import { research } from "@/lib/api";
+import {
+  parseWSMessage,
+  formatWSMessage,
+  WSMessageType,
+  type FormattedLog,
+} from "@/lib/ws-messages";
 
 interface Message {
-  id: string;
-  content: string;
-  timestamp: Date;
-}
-
-interface LogMessage {
   id: string;
   content: string;
   timestamp: Date;
@@ -29,7 +29,8 @@ export default function Home() {
   const [isQuerying, setIsQuerying] = useState(false);
   const [serverUrl, setServerUrl] = useState("");
   const [connectionId, setConnectionId] = useState<string | null>(null);
-  const [logs, setLogs] = useState<LogMessage[]>([]);
+  const [logs, setLogs] = useState<FormattedLog[]>([]);
+  const [currentState, setCurrentState] = useState<string | null>(null);
   const [resultContent, setResultContent] = useState<string>("");
   const wsManagerRef = useRef<WebSocketManager | null>(null);
   const logsEndRef = useRef<HTMLDivElement | null>(null);
@@ -67,17 +68,28 @@ export default function Home() {
     const unsubscribe = wsManagerRef.current.onMessage((data) => {
       if (data.connectionId) {
         setConnectionId(data.connectionId);
+        return;
       }
 
-      // Add all messages to logs during querying
-      if (isQuerying && !data.connectionId) {
-        const logMessage: LogMessage = {
-          id: Date.now().toString() + Math.random(),
-          content: JSON.stringify(data, null, 2),
-          timestamp: new Date(),
-        };
-        setLogs((prev) => [...prev, logMessage]);
+      // Only process messages during querying
+      if (!isQuerying) return;
+
+      // Parse and format the message
+      const message = parseWSMessage(data);
+      if (!message) return;
+
+      // Handle state transitions
+      if (message.type === WSMessageType.STATE_TRANSITION) {
+        const toState = message.data.to;
+        setCurrentState(toState);
+        // Clear logs on state transition
+        setLogs([]);
+        return;
       }
+
+      // Add formatted log for non-state-transition messages
+      const formattedLog = formatWSMessage(message);
+      setLogs((prev) => [...prev, formattedLog]);
     });
 
     return () => {
@@ -89,6 +101,10 @@ export default function Home() {
   const handleServerUrlChange = (url: string) => {
     localStorage.setItem(LOCAL_STORAGE_KEY, url);
     setServerUrl(url);
+
+    // Disconnect the websocket and re-create it
+    wsManagerRef.current?.disconnect();
+    wsManagerRef.current?.connect(url);
   };
 
   const handleSearch = async () => {
@@ -101,9 +117,10 @@ export default function Home() {
       return;
     }
 
-    // Clear previous logs and result
+    // Clear previous logs, result, and state
     setLogs([]);
     setResultContent("");
+    setCurrentState(null);
     setIsQuerying(true);
 
     try {
@@ -193,12 +210,23 @@ export default function Home() {
         {isQuerying ? (
           /* Console-style logs during loading */
           <div className="border border-border rounded-lg bg-muted/30 p-4 font-mono text-sm max-h-[70vh] overflow-y-auto">
+            {/* State header */}
             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              <span className="text-muted-foreground">Processing query...</span>
+              {currentState ? (
+                <span className="text-foreground font-semibold">
+                  Current Step: {currentState}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  Processing query...
+                </span>
+              )}
             </div>
+
+            {/* Logs area */}
             {logs.length === 0 ? (
-              <div className="text-muted-foreground italic">
+              <div className="text-muted-foreground italic text-xs">
                 Waiting for logs...
               </div>
             ) : (
