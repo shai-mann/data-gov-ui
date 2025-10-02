@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import Markdown from "react-markdown";
 import { SettingsDialog } from "@/components/settings-dialog";
+import { WebSocketManager } from "@/lib/websocket";
 
 interface Message {
   id: string;
@@ -20,6 +21,17 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isQuerying, setIsQuerying] = useState(false);
   const [serverUrl, setServerUrl] = useState("");
+  const [connectionId, setConnectionId] = useState<string | null>(null);
+  const wsManagerRef = useRef<WebSocketManager | null>(null);
+
+  // Initialize WebSocket manager
+  useEffect(() => {
+    wsManagerRef.current = new WebSocketManager();
+
+    return () => {
+      wsManagerRef.current?.disconnect();
+    };
+  }, []);
 
   // Load server URL from local storage on mount
   useEffect(() => {
@@ -29,6 +41,25 @@ export default function Home() {
     }
   }, []);
 
+  // WebSocket connection management
+  useEffect(() => {
+    if (!serverUrl || !wsManagerRef.current) return;
+
+    // Connect to the server
+    wsManagerRef.current.connect(serverUrl);
+
+    // Subscribe to messages
+    const unsubscribe = wsManagerRef.current.onMessage((data) => {
+      if (data.connectionId) {
+        setConnectionId(data.connectionId);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [serverUrl]);
+
   // Save server URL to local storage and update state
   const handleServerUrlChange = (url: string) => {
     localStorage.setItem(LOCAL_STORAGE_KEY, url);
@@ -36,22 +67,39 @@ export default function Home() {
   };
 
   const handleSearch = async () => {
-    if (!query.trim()) return;
+    if (!query.trim() || !serverUrl || !connectionId) {
+      console.error("Missing required data:", {
+        query: query.trim(),
+        serverUrl,
+        connectionId,
+      });
+      return;
+    }
 
     setIsQuerying(true);
 
-    // Mock: simulate adding messages over time
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          content: `# Search Results for: "${query}"\n\nThis is a **mock response** with some markdown content:\n\n- First result item\n- Second result item\n- Third result item\n\n\`\`\`javascript\nconst example = "code block";\nconsole.log(example);\n\`\`\`\n\n> This is a blockquote example\n\nMore content will appear here when connected to a websocket.`,
-          timestamp: new Date(),
+    try {
+      const response = await fetch(`${serverUrl}/research`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      ]);
+        body: JSON.stringify({
+          query: query.trim(),
+          connectionId,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Research request failed:", response.statusText);
+      } else {
+        console.log("Research request successful");
+      }
+    } catch (error) {
+      console.error("Error calling /research endpoint:", error);
+    } finally {
       setIsQuerying(false);
-    }, 1000);
+    }
   };
 
   return (
