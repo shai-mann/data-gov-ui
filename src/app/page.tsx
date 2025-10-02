@@ -45,7 +45,6 @@ export default function Home() {
   // Load server URL from local storage on mount
   useLayoutEffect(() => {
     const savedUrl = localStorage.getItem(LOCAL_STORAGE_KEY);
-    console.log("Saved URL:", savedUrl);
     if (savedUrl) {
       setServerUrl(savedUrl);
     }

@@ -37,15 +37,13 @@ export class WebSocketManager {
     });
 
     this.ws.addEventListener(WebsocketEvent.message, (_ws, event) => {
-      console.log("WebSocket message received:", event.data);
-
       try {
         const data = JSON.parse(event.data);
 
         // Handle connectionId assignment
         if (data.connectionId) {
           this.connectionId = data.connectionId;
-          console.log("Connection ID received:", data.connectionId);
+          return;
         }
 
         // Notify all handlers
