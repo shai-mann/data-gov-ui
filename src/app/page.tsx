@@ -7,6 +7,7 @@ import { Search, Loader2 } from "lucide-react";
 import Markdown from "react-markdown";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { WebSocketManager } from "@/lib/websocket";
+import { research } from "@/lib/api";
 
 interface Message {
   id: string;
@@ -106,45 +107,33 @@ export default function Home() {
     setIsQuerying(true);
 
     try {
-      const response = await fetch(`${serverUrl}/research`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: query.trim(),
-          connectionId,
-        }),
+      const result = await research(serverUrl, {
+        query: query.trim(),
+        connectionId,
       });
 
-      if (!response.ok) {
-        console.error("Research request failed:", response.statusText);
+      console.log("Research request successful", result);
+
+      // Set the result content for markdown display
+      if (result.result) {
+        setResultContent(result.result);
       } else {
-        const result = await response.json();
-
-        console.log("Research request successful", result);
-
-        // Set the result content for markdown display
-        if (result.result) {
-          setResultContent(result.result);
-        } else {
-          setResultContent(JSON.stringify(result, null, 2));
-        }
-
-        // Add result to messages
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            content:
-              result.content ||
-              result.result ||
-              result.response ||
-              JSON.stringify(result, null, 2),
-            timestamp: new Date(),
-          },
-        ]);
+        setResultContent(JSON.stringify(result, null, 2));
       }
+
+      // Add result to messages
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          content:
+            result.content ||
+            result.result ||
+            result.response ||
+            JSON.stringify(result, null, 2),
+          timestamp: new Date(),
+        },
+      ]);
     } catch (error) {
       console.error("Error calling /research endpoint:", error);
     } finally {
