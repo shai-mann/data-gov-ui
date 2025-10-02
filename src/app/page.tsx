@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { LoadingConsole } from "@/components/loading-console";
 import { WebSocketManager } from "@/lib/websocket";
@@ -38,6 +39,7 @@ export default function Home() {
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [stateSections, setStateSections] = useState<StateSection[]>([]);
   const [resultContent, setResultContent] = useState<string>("");
+  const [hasError, setHasError] = useState(false);
   const wsManagerRef = useRef<WebSocketManager | null>(null);
 
   // Derive current state and logs from stateSections
@@ -152,9 +154,10 @@ export default function Home() {
       return;
     }
 
-    // Clear previous result and state sections
+    // Clear previous result, state sections, and error state
     setResultContent("");
     setStateSections([]);
+    setHasError(false);
     setIsQuerying(true);
 
     try {
@@ -187,6 +190,19 @@ export default function Home() {
       ]);
     } catch (error) {
       console.error("Error calling /research endpoint:", error);
+      setHasError(true);
+
+      // Add error message to messages
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          content: `## Error\n\nAn error occurred while processing your query:\n\n\`\`\`\n${
+            error instanceof Error ? error.message : String(error)
+          }\n\`\`\`\n\nPlease check the logs above for more details. You may also need to refresh the page, if the websocket is disconnected.`,
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsQuerying(false);
     }
@@ -256,8 +272,8 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Loading Console - shows during querying */}
-            {isQuerying && (
+            {/* Loading Console - shows during querying or after error */}
+            {(isQuerying || (hasError && stateSections.length > 0)) && (
               <LoadingConsole
                 currentState={currentState}
                 logs={currentLogs}
@@ -279,9 +295,14 @@ export default function Home() {
                           prose-blockquote:border-l-primary prose-blockquote:border-l-4 prose-blockquote:bg-muted/30 prose-blockquote:py-1
                           prose-ul:list-disc prose-ol:list-decimal
                           prose-li:marker:text-primary
+                          prose-table:border-collapse prose-table:border prose-table:border-border
+                          prose-th:border prose-th:border-border prose-th:bg-muted prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold
+                          prose-td:border prose-td:border-border prose-td:px-4 prose-td:py-2
                           animate-in fade-in slide-in-from-bottom-4 duration-700"
               >
-                <Markdown>{message.content}</Markdown>
+                <Markdown remarkPlugins={[remarkGfm]}>
+                  {message.content}
+                </Markdown>
               </div>
             ))}
           </div>
