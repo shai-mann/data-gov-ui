@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState, useImperativeHandle, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,12 +18,20 @@ interface SettingsDialogProps {
   onServerUrlChange: (url: string) => void;
 }
 
-export function SettingsDialog({
+export interface SettingsDialogRef {
+  open: () => void;
+}
+
+export const SettingsDialog = forwardRef<SettingsDialogRef, SettingsDialogProps>(({
   serverUrl,
   onServerUrlChange,
-}: SettingsDialogProps) {
+}, ref) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempServerUrl, setTempServerUrl] = useState(serverUrl);
+
+  useImperativeHandle(ref, () => ({
+    open: () => setSettingsOpen(true),
+  }));
 
   useLayoutEffect(() => {
     setTempServerUrl(serverUrl);
@@ -83,4 +91,6 @@ export function SettingsDialog({
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+SettingsDialog.displayName = "SettingsDialog";

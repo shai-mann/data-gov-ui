@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { SettingsDialog } from "@/components/settings-dialog";
+import { SettingsDialog, type SettingsDialogRef } from "@/components/settings-dialog";
 import { LoadingConsole } from "@/components/loading-console";
 import { WebSocketManager } from "@/lib/websocket";
 import { research } from "@/lib/api";
@@ -41,6 +41,7 @@ export default function Home() {
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [stateSections, setStateSections] = useState<StateSection[]>([]);
   const wsManagerRef = useRef<WebSocketManager | null>(null);
+  const settingsDialogRef = useRef<SettingsDialogRef>(null);
 
   // Derive current state and logs from stateSections
   const currentState = useMemo(() => {
@@ -145,7 +146,17 @@ export default function Home() {
   };
 
   const handleSearch = async () => {
-    if (!query.trim() || !serverUrl || !connectionId) {
+    if (!query.trim()) {
+      return;
+    }
+
+    // If no server URL, open settings dialog
+    if (!serverUrl) {
+      settingsDialogRef.current?.open();
+      return;
+    }
+
+    if (!connectionId) {
       console.error("Missing required data:", {
         query: query.trim(),
         serverUrl,
@@ -260,6 +271,7 @@ export default function Home() {
             </Button>
             <div className="absolute right-4">
               <SettingsDialog
+                ref={settingsDialogRef}
                 serverUrl={serverUrl}
                 onServerUrlChange={handleServerUrlChange}
               />
