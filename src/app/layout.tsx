@@ -15,11 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DataGov Querier",
   description: "Answer your government-related questions!",
-  icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
-  },
 };
 
 export default function RootLayout({
