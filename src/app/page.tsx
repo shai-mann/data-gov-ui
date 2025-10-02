@@ -17,6 +17,7 @@ import {
   type FormattedLog,
 } from "@/lib/ws-messages";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface Message {
   id: string;
@@ -220,6 +221,16 @@ export default function Home() {
           )}
         >
           <div className="flex gap-3 items-center">
+            <div className="flex-shrink-0 flex flex-col items-center absolute left-8">
+              <Image
+                src="/favicon.png"
+                alt="DataGov Logo"
+                width={46}
+                height={46}
+                className="rounded-full"
+              />
+              <span className="text-sm font-medium mt-1">DataGov Querier</span>
+            </div>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -269,7 +280,7 @@ export default function Home() {
               What can I help you find?
             </h1>
             <p className="text-muted-foreground text-lg">
-              Enter a search query to get started
+              Ask a question about government data
             </p>
           </div>
         ) : (
@@ -310,6 +321,11 @@ export default function Home() {
           </div>
         )}
       </div>
+      <p className="fixed bottom-2 left-0 right-0 text-muted-foreground text-xs text-center mt-auto">
+        Disclaimer: datasets are provided by the U.S. government and are linked
+        accurately, but the answers and conclusions performed by the agent are
+        not guaranteed to be correct, and should be verified by the user.
+      </p>
     </div>
   );
 }
