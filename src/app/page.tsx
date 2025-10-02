@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
@@ -14,6 +14,12 @@ interface Message {
   timestamp: Date;
 }
 
+interface LogMessage {
+  id: string;
+  content: string;
+  timestamp: Date;
+}
+
 const LOCAL_STORAGE_KEY = "data-gov-server-url";
 
 export default function Home() {
@@ -22,7 +28,10 @@ export default function Home() {
   const [isQuerying, setIsQuerying] = useState(false);
   const [serverUrl, setServerUrl] = useState("");
   const [connectionId, setConnectionId] = useState<string | null>(null);
+  const [logs, setLogs] = useState<LogMessage[]>([]);
+  const [resultContent, setResultContent] = useState<string>("");
   const wsManagerRef = useRef<WebSocketManager | null>(null);
+  const logsEndRef = useRef<HTMLDivElement | null>(null);
 
   // Initialize WebSocket manager
   useEffect(() => {
@@ -34,12 +43,18 @@ export default function Home() {
   }, []);
 
   // Load server URL from local storage on mount
-  useEffect(() => {
+  useLayoutEffect(() => {
     const savedUrl = localStorage.getItem(LOCAL_STORAGE_KEY);
+    console.log("Saved URL:", savedUrl);
     if (savedUrl) {
       setServerUrl(savedUrl);
     }
   }, []);
+
+  // Auto-scroll logs to bottom
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [logs]);
 
   // WebSocket connection management
   useEffect(() => {
@@ -53,12 +68,22 @@ export default function Home() {
       if (data.connectionId) {
         setConnectionId(data.connectionId);
       }
+
+      // Add all messages to logs during querying
+      if (isQuerying && !data.connectionId) {
+        const logMessage: LogMessage = {
+          id: Date.now().toString() + Math.random(),
+          content: JSON.stringify(data, null, 2),
+          timestamp: new Date(),
+        };
+        setLogs((prev) => [...prev, logMessage]);
+      }
     });
 
     return () => {
       unsubscribe();
     };
-  }, [serverUrl]);
+  }, [serverUrl, isQuerying]);
 
   // Save server URL to local storage and update state
   const handleServerUrlChange = (url: string) => {
@@ -76,6 +101,9 @@ export default function Home() {
       return;
     }
 
+    // Clear previous logs and result
+    setLogs([]);
+    setResultContent("");
     setIsQuerying(true);
 
     try {
@@ -93,7 +121,30 @@ export default function Home() {
       if (!response.ok) {
         console.error("Research request failed:", response.statusText);
       } else {
-        console.log("Research request successful");
+        const result = await response.json();
+
+        console.log("Research request successful", result);
+
+        // Set the result content for markdown display
+        if (result.result) {
+          setResultContent(result.result);
+        } else {
+          setResultContent(JSON.stringify(result, null, 2));
+        }
+
+        // Add result to messages
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            content:
+              result.content ||
+              result.result ||
+              result.response ||
+              JSON.stringify(result, null, 2),
+            timestamp: new Date(),
+          },
+        ]);
       }
     } catch (error) {
       console.error("Error calling /research endpoint:", error);
@@ -151,7 +202,36 @@ export default function Home() {
 
       {/* Messages Container */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {messages.length === 0 ? (
+        {isQuerying ? (
+          /* Console-style logs during loading */
+          <div className="border border-border rounded-lg bg-muted/30 p-4 font-mono text-sm max-h-[70vh] overflow-y-auto">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-muted-foreground">Processing query...</span>
+            </div>
+            {logs.length === 0 ? (
+              <div className="text-muted-foreground italic">
+                Waiting for logs...
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {logs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="text-xs text-foreground/80 whitespace-pre-wrap break-words animate-in fade-in slide-in-from-bottom-2 duration-200"
+                  >
+                    <span className="text-muted-foreground">
+                      [{log.timestamp.toLocaleTimeString()}]
+                    </span>{" "}
+                    {log.content}
+                  </div>
+                ))}
+                <div ref={logsEndRef} />
+              </div>
+            )}
+          </div>
+        ) : messages.length === 0 ? (
+          /* Empty state */
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
             <div className="p-4 rounded-full bg-muted/50 mb-6">
               <Search className="h-12 w-12 text-muted-foreground" />
@@ -164,6 +244,7 @@ export default function Home() {
             </p>
           </div>
         ) : (
+          /* Results display */
           <div className="space-y-8">
             {messages.map((message) => (
               <div
@@ -173,8 +254,8 @@ export default function Home() {
                           prose-h1:text-3xl prose-h1:mb-4
                           prose-p:leading-relaxed prose-p:text-foreground/90
                           prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                          prose-code:text-sm prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none
-                          prose-pre:bg-muted prose-pre:border prose-pre:shadow-sm
+                          prose-code:text-sm prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-code:text-foreground
+                          prose-pre:bg-muted prose-pre:border prose-pre:shadow-sm prose-pre:text-foreground
                           prose-blockquote:border-l-primary prose-blockquote:border-l-4 prose-blockquote:bg-muted/30 prose-blockquote:py-1
                           prose-ul:list-disc prose-ol:list-decimal
                           prose-li:marker:text-primary

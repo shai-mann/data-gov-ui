@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,6 +24,10 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempServerUrl, setTempServerUrl] = useState(serverUrl);
+
+  useLayoutEffect(() => {
+    setTempServerUrl(serverUrl);
+  }, [serverUrl]);
 
   const handleSave = () => {
     onServerUrlChange(tempServerUrl);
