@@ -16,6 +16,7 @@ import {
   WSMessageType,
   type FormattedLog,
 } from "@/lib/ws-messages";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -209,10 +210,15 @@ export default function Home() {
       {/* Sticky Search Bar */}
       <div
         className={`sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b transition-all duration-200 ${
-          isQuerying ? "pointer-events-none opacity-60" : ""
+          isQuerying ? "pointer-events-none" : ""
         }`}
       >
-        <div className="max-w-4xl mx-auto px-4 py-6">
+        <div
+          className={cn(
+            "max-w-4xl mx-auto px-4 py-6",
+            isQuerying ? "pointer-events-none opacity-60" : ""
+          )}
+        >
           <div className="flex gap-3 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
